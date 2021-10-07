@@ -1,0 +1,53 @@
+{
+    "name": "qubus/cache",
+    "type": "library",
+    "description": "Database abstraction layer.",
+    "keywords": [
+        "cache",
+        "psr",
+        "psr-16",
+        "psr-6",
+        "simple-cache",
+        "caching"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Joshua Parker",
+            "email": "josh@joshuaparker.blog"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "psr/cache": "^3.0",
+        "psr/simple-cache": "^1.0",
+        "qubus/config": "^1.1",
+        "qubus/exception": "^1.2",
+        "qubus/filesystem": "^1.1",
+        "qubus/support": "^1.1"
+    },
+    "require-dev": {
+        "laminas/laminas-coding-standard": "^2.0",
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Qubus\\Cache\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Qubus\\Tests\\Cache\\": "Tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "cs-check": "phpcs",
+        "cs-fix": "phpcbf"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
