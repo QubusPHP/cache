@@ -24,7 +24,7 @@
         "qubus/config": "^1.1",
         "qubus/exception": "^1.2",
         "qubus/filesystem": "^1.1",
-        "qubus/support": "^1.1"
+        "qubus/support": "^2"
     },
     "require-dev": {
         "laminas/laminas-coding-standard": "^2.0",
