@@ -43,10 +43,7 @@ use function strcspn;
 final class TaggablePsr6ItemAdapter implements TaggableCacheItem
 {
     /** @var bool $initialized */
-    private $initialized = false;
-
-    /** @var CacheItemInterface $cacheItem */
-    private $cacheItem;
+    private bool $initialized = false;
 
     /** @var array $prevTags */
     private array $prevTags = [];
@@ -54,9 +51,8 @@ final class TaggablePsr6ItemAdapter implements TaggableCacheItem
     /** @var array $tags */
     private array $tags = [];
 
-    private function __construct(CacheItemInterface $cacheItem)
+    private function __construct(private CacheItemInterface $cacheItem)
     {
-        $this->cacheItem = $cacheItem;
     }
 
     public static function makeTaggable(CacheItemInterface $cacheItem): TaggablePsr6ItemAdapter

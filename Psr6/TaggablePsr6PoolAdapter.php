@@ -46,10 +46,10 @@ use function is_array;
 final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
 {
     /** @var CacheItemPoolInterface $cachePool */
-    private $cachePool;
+    private CacheItemPoolInterface $cachePool;
 
     /** @var CacheItemPoolInterface $tagStorePool */
-    private $tagStorePool;
+    private ?CacheItemPoolInterface $tagStorePool;
 
     private function __construct(CacheItemPoolInterface $cachePool, ?CacheItemPoolInterface $tagStorePool = null)
     {

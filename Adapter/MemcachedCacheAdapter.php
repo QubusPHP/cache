@@ -21,11 +21,8 @@ use function Qubus\Support\Helpers\is_null__;
 
 class MemcachedCacheAdapter extends Multiple implements CacheAdapter
 {
-    private Memcached $memcached;
-
-    public function __construct(Memcached $memcached)
+    public function __construct(private Memcached $memcached)
     {
-        $this->memcached = $memcached;
     }
 
     /**

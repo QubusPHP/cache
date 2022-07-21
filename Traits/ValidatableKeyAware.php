@@ -25,7 +25,7 @@ use function preg_match;
 use function preg_quote;
 use function sprintf;
 
-trait ValidatableKey
+trait ValidatableKeyAware
 {
     /**
      * Reserved key characters that should not be used in a cache key.
