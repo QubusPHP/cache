@@ -18,7 +18,8 @@ use DateInterval;
 use Psr\SimpleCache\CacheInterface;
 use Qubus\Cache\Adapter\CacheAdapter;
 use Qubus\Cache\DateIntervalConverter;
-use Qubus\Cache\Traits\ValidatableKey;
+use Qubus\Cache\Traits\ValidatableKeyAware;
+use Traversable;
 
 use function array_combine;
 use function array_keys;
@@ -27,32 +28,22 @@ use function is_int;
 
 final class SimpleCache implements CacheInterface
 {
-    use ValidatableKey;
-
-    protected CacheAdapter $adapter;
-
-    /** @var int|null|DateInterval $ttl */
-    protected int|null|DateInterval $ttl;
-
-    protected ?string $namespace;
+    use ValidatableKeyAware;
 
     /** @var const CACHE_FLAG */
     public const CACHE_FLAG = "@psr16_";
 
     public function __construct(
-        CacheAdapter $adapter,
-        int|null|DateInterval $ttl = null,
-        ?string $namespace = 'default'
+        private CacheAdapter $adapter,
+        private int|null|DateInterval $ttl = null,
+        private ?string $namespace = 'default'
     ) {
-        $this->adapter = $adapter;
-        $this->ttl = $ttl;
-        $this->namespace = $namespace;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function get($key, $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         return (null !== $value = $this->adapter->get($this->validateKey($key))) ? $value : $default;
     }
@@ -60,7 +51,7 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function set($key, $value, $ttl = null)
+    public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
     {
         return $this->adapter->set($this->validateKey($key), $value, $this->getTtl($ttl));
     }
@@ -68,7 +59,7 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function delete($key)
+    public function delete(string $key): bool
     {
         return $this->adapter->delete($this->validateKey($key));
     }
@@ -76,7 +67,7 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function clear()
+    public function clear(): bool
     {
         $this->adapter->purge(self::CACHE_FLAG . $this->namespace);
 
@@ -86,8 +77,12 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function getMultiple($keys, $default = null)
+    public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
+        if($keys instanceof Traversable) {
+            $keys = iterator_to_array($keys, false);
+        }
+
         return array_combine($keys, array_map(function ($value) use ($default) {
             return $value ?? $default;
         }, $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys))));
@@ -96,8 +91,12 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function setMultiple($values, $ttl = null)
+    public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
+        if($values instanceof Traversable) {
+            $values = iterator_to_array($values, false);
+        }
+
         return null === $this->adapter->setMultiple(
             array_combine(
                 array_map([$this, 'validateKey'], array_keys($values)),
@@ -114,20 +113,24 @@ final class SimpleCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function deleteMultiple($keys)
+    public function deleteMultiple(iterable $keys): bool
     {
+        if($keys instanceof Traversable) {
+            $keys = iterator_to_array($keys, false);
+        }
+
         return null === $this->adapter->deleteMultiple(array_map([$this, 'validateKey'], $keys));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function has($key)
+    public function has(string $key): bool
     {
         return $this->adapter->has($this->validateKey($key));
     }
 
-    protected function getTtl(int|null|DateInterval $ttl): ?int
+    private function getTtl(int|null|DateInterval $ttl): ?int
     {
         if (is_int($ttl)) {
             return $ttl === 1 ? $this->ttl : $ttl;

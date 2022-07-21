@@ -25,12 +25,6 @@ use function Qubus\Support\Helpers\is_null__;
 
 final class Item implements CacheItemInterface
 {
-    protected string $key;
-
-    protected mixed $value;
-
-    protected bool $isHit;
-
     /** @var DateTimeInterface|DateInterval|int|null $expiration */
     protected DateTimeInterface|DateInterval|int|null $expiration;
 
@@ -43,11 +37,12 @@ final class Item implements CacheItemInterface
      * @param string $key Cache key.
      * @param mixed $value Cache value.
      */
-    public function __construct(string $key, mixed $value = null, ?DateTimeInterface $ttl = null, bool $isHit = false)
+    public function __construct(
+        private string $key,
+        private mixed $value = null,
+        ?DateTimeInterface $ttl = null,
+        private bool $isHit = false)
     {
-        $this->key = $key;
-        $this->value = $value;
-        $this->isHit = $isHit;
         $this->expiresAt($ttl);
     }
 

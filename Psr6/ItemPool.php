@@ -19,7 +19,7 @@ use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Qubus\Cache\Adapter\CacheAdapter;
 use Qubus\Cache\DateIntervalConverter;
-use Qubus\Cache\Traits\ValidatableKey;
+use Qubus\Cache\Traits\ValidatableKeyAware;
 use Qubus\Exception\Exception;
 
 use function array_combine;
@@ -33,19 +33,10 @@ use function Qubus\Support\Helpers\is_null__;
 
 final class ItemPool implements CacheItemPoolInterface
 {
-    use ValidatableKey;
-
-    protected CacheAdapter $adapter;
-
-    /** @var int|null|DateInterval $ttl */
-    protected int|null|DateInterval $ttl;
-
-    protected ?string $namespace;
+    use ValidatableKeyAware;
 
     /** @var CacheItemInterface[] $deferred */
     protected array $deferredItems = [];
-
-    protected int|null $autoCommitCount;
 
     /** @var const CACHE_FLAG */
     public const CACHE_FLAG = "@psr6_";
@@ -54,15 +45,11 @@ final class ItemPool implements CacheItemPoolInterface
      * @throws Exception
      */
     public function __construct(
-        CacheAdapter $adapter,
-        int|null|DateInterval $ttl = null,
-        ?string $namespace = 'default',
-        ?int $autoCommitCount = null
+        private CacheAdapter $adapter,
+        private int|null|DateInterval $ttl = null,
+        private ?string $namespace = 'default',
+        private ?int $autoCommitCount = null
     ) {
-        $this->adapter = $adapter;
-        $this->ttl = $ttl;
-        $this->namespace = $namespace;
-        $this->autoCommitCount = $autoCommitCount;
     }
 
     /**
@@ -197,32 +184,6 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function commit(): bool
     {
-        /*$success = true;
-        $items = $this->deferredItems;
-        $this->deferredItems = [];
-
-        foreach ($items as $item) {
-            $adapterKey = CacheKey::fromNative($item->getKey());
-            $values = [];
-            //$adapterKey = new CacheKey($item->getKey()); the key is probably already cached.
-            $this->save($item);
-            if ($item->isHit()) {
-                unset($this->deferredItems[$adapterKey->toNative()]);
-            }*/
-
-        /*$values[$adapterKey->toNative()] = $item->get();
-        if (
-            ! $this->adapter->setMultiple(
-                $values,
-                $this->ttl ?? $item->getExpiresInSeconds()
-            )
-        ) {
-            $success = false;
-        }
-        }
-
-        return $success;*/
-
         if (is_null__($this->deferredItems)) {
             return true;
         }

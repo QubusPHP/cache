@@ -35,11 +35,8 @@ use function unserialize;
 
 class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 {
-    protected FilesystemOperator $operator;
-
-    public function __construct(FilesystemOperator $operator)
+    public function __construct(protected FilesystemOperator $operator)
     {
-        $this->operator = $operator;
     }
 
     /**

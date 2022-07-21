@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Qubus\Cache;
 
+use DateInterval;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -43,7 +44,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::get()
      */
-    public function get($key, $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         return $this->cache->get($key, $default);
     }
@@ -53,7 +54,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::set()
      */
-    public function set($key, $value, $ttl = null)
+    public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
     {
         return $this->cache->set($key, $value, $ttl);
     }
@@ -63,7 +64,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::delete()
      */
-    public function delete($key)
+    public function delete(string $key): bool
     {
         return $this->cache->delete($key);
     }
@@ -85,7 +86,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::getMultiple()
      */
-    public function getMultiple($keys, $default = null): ?iterable
+    public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         return $this->cache->getMultiple($keys, $default);
     }
@@ -95,7 +96,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::setMultiple()
      */
-    public function setMultiple($values, $ttl = null): bool
+    public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
     {
         return $this->cache->setMultiple($values, $ttl);
     }
@@ -105,7 +106,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::deleteMultiple()
      */
-    public function deleteMultiple($keys): bool
+    public function deleteMultiple(iterable $keys): bool
     {
         return $this->cache->deleteMultiple($keys);
     }
@@ -115,7 +116,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
      *
      * @see \Psr\SimpleCache\CacheInterface::has()
      */
-    public function has($key): bool
+    public function has(string $key): bool
     {
         return $this->cache->has($key);
     }

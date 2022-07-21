@@ -27,11 +27,8 @@ use function Qubus\Support\Helpers\is_null__;
 
 class RedisCacheAdapter extends Multiple implements CacheAdapter
 {
-    private Redis $redis;
-
-    public function __construct(Redis $redis)
+    public function __construct(private Redis $redis)
     {
-        $this->redis = $redis;
     }
 
     /**
