@@ -46,6 +46,10 @@
         "cs-check": "phpcs",
         "cs-fix": "phpcbf"
     },
+    "provide": {
+        "psr/cache-implementation": "^3.0",
+        "psr/simple-cache-implementation": "^3.0"
+    },
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true
