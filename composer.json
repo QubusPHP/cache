@@ -14,7 +14,7 @@
     "authors": [
         {
             "name": "Joshua Parker",
-            "email": "josh@joshuaparker.blog"
+            "email": "joshua@joshuaparker.dev"
         }
     ],
     "require": {
@@ -24,7 +24,7 @@
         "qubus/config": "^2.0",
         "qubus/exception": "^2.0",
         "qubus/filesystem": "^2.0",
-        "qubus/support": "^2.2"
+        "qubus/support": "^2.3"
     },
     "require-dev": {
         "laminas/laminas-coding-standard": "^2.0",
