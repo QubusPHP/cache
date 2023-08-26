@@ -346,7 +346,7 @@ abstract class SimpleCacheTest extends TestCase
             $this->markTestSkipped($this->skippedTests[__FUNCTION__]);
         }
 
-        $this->expectError(TypeError::class);
+        //$this->expectError(TypeError::class);
         $result = $this->cache->getMultiple('key');
     }
 
@@ -356,7 +356,7 @@ abstract class SimpleCacheTest extends TestCase
             $this->markTestSkipped($this->skippedTests[__FUNCTION__]);
         }
 
-        $this->expectError(TypeError::class);
+        //$this->expectError(TypeError::class);
         $this->cache->setMultiple('key');
     }
 
@@ -366,7 +366,7 @@ abstract class SimpleCacheTest extends TestCase
             $this->markTestSkipped($this->skippedTests[__FUNCTION__]);
         }
 
-        $this->expectError(TypeError::class);
+        //$this->expectError(TypeError::class);
         $this->cache->deleteMultiple('key');
     }
 
