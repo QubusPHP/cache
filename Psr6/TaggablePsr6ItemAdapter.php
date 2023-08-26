@@ -4,11 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
- * @copyright  2015 Aaron Scherer <aequasi@gmail.com>, Tobias Nyholm <tobias.nyholm@gmail.com>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -122,9 +120,6 @@ final class TaggablePsr6ItemAdapter implements TaggableCacheItem
         return $this->prevTags;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getTags(): array
     {
         return $this->tags;
@@ -142,8 +137,10 @@ final class TaggablePsr6ItemAdapter implements TaggableCacheItem
 
     /**
      * @param array|string $tags
+     * @return TaggableCacheItem
+     * @throws TypeException
      */
-    private function tag($tags): TaggableCacheItem
+    private function tag(array|string $tags): TaggableCacheItem
     {
         if (! is_array($tags)) {
             $tags = [$tags];
@@ -224,8 +221,9 @@ final class TaggablePsr6ItemAdapter implements TaggableCacheItem
      * Verify that the raw data is a cache item created by this class.
      *
      * @param mixed $rawItem
+     * @return bool
      */
-    private function isItemCreatedHere($rawItem): bool
+    private function isItemCreatedHere(mixed $rawItem): bool
     {
         return is_array($rawItem)
         && array_key_exists__('value', $rawItem)

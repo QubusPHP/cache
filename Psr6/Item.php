@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -41,8 +40,8 @@ final class Item implements CacheItemInterface
         private string $key,
         private mixed $value = null,
         ?DateTimeInterface $ttl = null,
-        private bool $isHit = false)
-    {
+        private bool $isHit = false
+    ) {
         $this->expiresAt($ttl);
     }
 
@@ -81,7 +80,7 @@ final class Item implements CacheItemInterface
     }
 
     /**
-     * Set whether its a cache hit or not.
+     * Set whether it's a cache hit or not.
      *
      * @param bool $value False or true.
      * @return static

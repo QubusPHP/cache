@@ -4,11 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
- * @copyright  2015 Aaron Scherer <aequasi@gmail.com>, Tobias Nyholm <tobias.nyholm@gmail.com>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -18,6 +16,8 @@ namespace Qubus\Cache\Psr6;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
+use Psr\Cache\InvalidArgumentException;
+
 use function array_filter;
 use function array_merge;
 use function is_array;
@@ -25,15 +25,15 @@ use function is_array;
 /**
  * This adapter lets you make any PSR-6 cache pool taggable. If a pool is
  * already taggable, it is simply returned by makeTaggable. Tags are stored
- * either in the same cache pool, or a a separate pool, and both of these
- * appoaches come with different caveats.
+ * either in the same cache pool, or a separate pool, and both of these
+ * approaches come with different caveats.
  *
  * A general caveat is that using this adapter reserves any cache key starting
  * with '__tag.'.
  *
  * Using the same pool is precarious if your cache does LRU evictions of items
  * even if they do not expire (as in e.g. memcached). If so, the tag item may
- * be evicted without all of the tagged items having been evicted first,
+ * be evicted without all the tagged items having been evicted first,
  * causing items to lose their tags.
  *
  * In order to mitigate this issue, you may use a separate, more persistent
@@ -48,7 +48,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     /** @var CacheItemPoolInterface $cachePool */
     private CacheItemPoolInterface $cachePool;
 
-    /** @var CacheItemPoolInterface $tagStorePool */
+    /** @var ?CacheItemPoolInterface $tagStorePool */
     private ?CacheItemPoolInterface $tagStorePool;
 
     private function __construct(CacheItemPoolInterface $cachePool, ?CacheItemPoolInterface $tagStorePool = null)
@@ -142,8 +142,9 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
 
     /**
      * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
-    public function save(CacheItemInterface $item): bool
+    public function save(TaggableCacheItem|CacheItemInterface $item): bool
     {
         $this->removeTagEntries($item);
         $this->saveTags($item);
@@ -153,8 +154,9 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
 
     /**
      * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
-    public function saveDeferred(CacheItemInterface $item): bool
+    public function saveDeferred(TaggableCacheItem|CacheItemInterface $item): bool
     {
         $this->saveTags($item);
 
@@ -170,7 +172,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     }
 
     /**
-     * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
     protected function appendListItem($name, $value): void
     {
@@ -185,7 +187,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     }
 
     /**
-     * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
     protected function removeList($name): bool
     {
@@ -193,7 +195,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     }
 
     /**
-     * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
     protected function removeListItem($name, $key): void
     {
@@ -211,7 +213,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     }
 
     /**
-     * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
     protected function getList($name)
     {
@@ -223,9 +225,6 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
         return $list;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function getTagKey(string $tag): string
     {
         return '__tag.' . $tag;
@@ -233,6 +232,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
 
     /**
      * @return $this
+     * @throws InvalidArgumentException
      */
     private function saveTags(TaggablePsr6ItemAdapter $item): static
     {
@@ -279,6 +279,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
      * Removes the key form all tag lists.
      *
      * @return $this
+     * @throws InvalidArgumentException
      */
     private function preRemoveItem(string $key): static
     {
@@ -288,6 +289,9 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
         return $this;
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     private function removeTagEntries(TaggableCacheItem $item): void
     {
         $tags = $item->getPreviousTags();

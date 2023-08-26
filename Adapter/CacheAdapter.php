@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -22,14 +21,14 @@ interface CacheAdapter
      * @param string $key Cache key.
      * @return mixed Cache value corresponding to the key or null if no value was found.
      */
-    public function get(string $key);
+    public function get(string $key): mixed;
 
     /**
      * Get multiple values from the cache store.
      *
      * @param array $keys Array of cache keys.
-     * @return array[string|null Sequential array for each cache value corresponding to a key.
-     *                            Null will be assigned if value was not found.
+     * @return iterable|null Sequential array for each cache value corresponding to a key.
+     *                       Null will be assigned if value was not found.
      */
     public function getMultiple(array $keys): ?iterable;
 
