@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -16,6 +15,8 @@ namespace Qubus\Cache\Adapter;
 
 use Closure;
 use Redis;
+
+use RedisException;
 
 use function array_combine;
 use function array_filter;
@@ -34,9 +35,10 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::get()
      */
-    public function get(string $key)
+    public function get(string $key): mixed
     {
         return false === $value = $this->redis->get($key) ? null : $value;
     }
@@ -44,6 +46,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
     public function set(string $key, mixed $value, ?int $ttl): bool
@@ -54,16 +57,18 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::delete()
      */
     public function delete(string $key): bool
     {
-        return 0 !== $this->redis->delete($key);
+        return 0 !== $this->redis->del($key);
     }
 
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::has()
      */
     public function has(string $key): bool
@@ -74,6 +79,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::getMultiple()
      */
     public function getMultiple(array $keys): ?array
@@ -90,20 +96,20 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritdoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::setMultiple()
      */
     public function setMultiple(array $values): ?array
     {
         $results = null;
 
-        foreach (
-            array_combine(array_keys($values), $this->pipeline(function () use ($values): void {
-                foreach ($values as $key => $value) {
-                    is_null__($value['ttl']) ?
-                    $this->redis->set($key, $value['value']) :
-                    $this->redis->setEx($key, $value['ttl'], $value['value']);
-                }
-            })) as $key => $result
+        foreach (array_combine(array_keys($values), $this->pipeline(function () use ($values): void {
+            foreach ($values as $key => $value) {
+                is_null__($value['ttl']) ?
+                $this->redis->set($key, $value['value']) :
+                $this->redis->setEx($key, $value['ttl'], $value['value']);
+            }
+        })) as $key => $result
         ) {
             if (! $result) {
                 $results[] = $key;
@@ -116,6 +122,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritdoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::deleteMultiple()
      */
     public function deleteMultiple(array $keys): ?array
@@ -127,7 +134,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
             return null;
         }, $this->pipeline(function () use ($keys): void {
             foreach ($keys as $key) {
-                $this->redis->delete($key);
+                $this->redis->del($key);
             }
         }), $keys));
 
@@ -137,6 +144,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
+     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
     public function purge(?string $pattern): void
@@ -160,6 +168,9 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
         }
     }
 
+    /**
+     * @throws RedisException
+     */
     private function pipeline(Closure $action): array
     {
         $this->redis->multi(Redis::PIPELINE);

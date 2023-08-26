@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -17,6 +16,7 @@ namespace Qubus\Cache;
 use DateInterval;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Psr\SimpleCache\CacheInterface;
 use Qubus\Cache\Adapter\CacheAdapter;
 use Qubus\Cache\Psr16\SimpleCache;
@@ -174,6 +174,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
     /**
      * {@inheritdoc}
      *
+     * @throws InvalidArgumentException
      * @see \Psr\Cache\CacheItemPoolInterface::save()
      */
     public function save(CacheItemInterface $item): bool
@@ -184,6 +185,7 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
     /**
      * {@inheritdoc}
      *
+     * @throws TypeException
      * @see \Psr\Cache\CacheItemPoolInterface::saveDeferred()
      */
     public function saveDeferred(CacheItemInterface $item): bool

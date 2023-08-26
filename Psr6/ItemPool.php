@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -17,9 +16,11 @@ namespace Qubus\Cache\Psr6;
 use DateInterval;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Qubus\Cache\Adapter\CacheAdapter;
 use Qubus\Cache\DateIntervalConverter;
 use Qubus\Cache\Traits\ValidatableKeyAware;
+use Qubus\Cache\TypeException;
 use Qubus\Exception\Exception;
 
 use function array_combine;
@@ -38,17 +39,15 @@ final class ItemPool implements CacheItemPoolInterface
     /** @var CacheItemInterface[] $deferred */
     protected array $deferredItems = [];
 
-    /** @var const CACHE_FLAG */
     public const CACHE_FLAG = "@psr6_";
 
     /**
-     * @throws Exception
      */
     public function __construct(
-        private CacheAdapter $adapter,
-        private int|null|DateInterval $ttl = null,
-        private ?string $namespace = 'default',
-        private ?int $autoCommitCount = null
+        private readonly CacheAdapter $adapter,
+        private readonly int|null|DateInterval $ttl = null,
+        private readonly ?string $namespace = 'default',
+        private readonly ?int $autoCommitCount = null
     ) {
     }
 
@@ -93,8 +92,9 @@ final class ItemPool implements CacheItemPoolInterface
         return array_combine(
             $keys,
             array_map(function (?string $item, string $key): CacheItemInterface {
-                return null !== $item ? new Item($item) : $this->deferredItems[$this->validateKey($key)] ?? new Item($key);
-            }, $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys)), $keys)
+                return null !== $item ? new Item($item) :
+                    $this->deferredItems[$this->validateKey($key)] ?? new Item($key);
+            }, (array) $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys)), $keys)
         );
     }
 
@@ -151,6 +151,7 @@ final class ItemPool implements CacheItemPoolInterface
 
     /**
      * {@inheritdoc}
+     * @throws InvalidArgumentException
      */
     public function save(CacheItemInterface $item): bool
     {
@@ -167,6 +168,7 @@ final class ItemPool implements CacheItemPoolInterface
 
     /**
      * {@inheritdoc}
+     * @throws TypeException
      */
     public function saveDeferred(CacheItemInterface $item): bool
     {

@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -15,11 +14,11 @@ declare(strict_types=1);
 namespace Qubus\Cache\Adapter;
 
 use DateInterval;
+use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
 use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToWriteFile;
-use Qubus\Cache\Adapter\Multiple;
 use Qubus\Cache\DateIntervalConverter;
 use Qubus\Exception\Data\TypeException;
 use Qubus\Support\DateTime\QubusDateTimeImmutable;
@@ -41,8 +40,10 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
+     * @throws TypeException
+     * @throws FilesystemException
      */
-    public function get(string $key)
+    public function get(string $key): mixed
     {
         if (! is_string($key)) {
             throw new TypeException('$key must be a string.');
@@ -57,15 +58,14 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
             $cache = unserialize($this->operator->read($key));
 
             return $cache['value'];
-        } catch (UnableToReadFile $ex) {
+        } catch (UnableToReadFile|FilesystemException $ex) {
             return null;
         }
-
-        return null;
     }
 
     /**
      * {@inheritdoc}
+     * @throws TypeException
      */
     public function set(string $key, mixed $value, ?int $ttl): bool
     {
@@ -83,7 +83,7 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
         try {
             $this->operator->write($key, serialize($cache));
-        } catch (UnableToWriteFile $ex) {
+        } catch (UnableToWriteFile|FilesystemException $ex) {
             return false;
         }
 
@@ -92,6 +92,7 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
+     * @throws TypeException|FilesystemException
      */
     public function delete(string $key): bool
     {
@@ -111,12 +112,11 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
         } catch (UnableToDeleteFile $ex) {
             return false;
         }
-
-        return false;
     }
 
     /**
      * {@inheritdoc}
+     * @throws FilesystemException
      */
     public function purge(?string $pattern): void
     {
@@ -138,6 +138,8 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
+     * @throws TypeException
+     * @throws FilesystemException
      */
     public function has(string $key): bool
     {

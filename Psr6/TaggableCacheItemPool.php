@@ -4,11 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
- * @copyright  2015 Aaron Scherer <aequasi@gmail.com>, Tobias Nyholm <tobias.nyholm@gmail.com>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);

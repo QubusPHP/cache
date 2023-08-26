@@ -4,10 +4,9 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021 Joshua Parker <josh@joshuaparker.blog>
+ * @copyright  2021
+ * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
- *
- * @since      1.0.0
  */
 
 declare(strict_types=1);
@@ -30,13 +29,12 @@ final class SimpleCache implements CacheInterface
 {
     use ValidatableKeyAware;
 
-    /** @var const CACHE_FLAG */
     public const CACHE_FLAG = "@psr16_";
 
     public function __construct(
-        private CacheAdapter $adapter,
-        private int|null|DateInterval $ttl = null,
-        private ?string $namespace = 'default'
+        private readonly CacheAdapter $adapter,
+        private readonly int|null|DateInterval $ttl = null,
+        private readonly ?string $namespace = 'default'
     ) {
     }
 
@@ -79,13 +77,13 @@ final class SimpleCache implements CacheInterface
      */
     public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
-        if($keys instanceof Traversable) {
+        if ($keys instanceof Traversable) {
             $keys = iterator_to_array($keys, false);
         }
 
         return array_combine($keys, array_map(function ($value) use ($default) {
             return $value ?? $default;
-        }, $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys))));
+        }, (array) $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys))));
     }
 
     /**
@@ -93,7 +91,7 @@ final class SimpleCache implements CacheInterface
      */
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
-        if($values instanceof Traversable) {
+        if ($values instanceof Traversable) {
             $values = iterator_to_array($values, false);
         }
 
@@ -115,7 +113,7 @@ final class SimpleCache implements CacheInterface
      */
     public function deleteMultiple(iterable $keys): bool
     {
-        if($keys instanceof Traversable) {
+        if ($keys instanceof Traversable) {
             $keys = iterator_to_array($keys, false);
         }
 
