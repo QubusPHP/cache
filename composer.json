@@ -1,7 +1,7 @@
 {
     "name": "qubus/cache",
     "type": "library",
-    "description": "Database abstraction layer.",
+    "description": "PHP cache library with adapters for Memcached, Redis, Filesystem, APCu and In Memory.",
     "keywords": [
         "cache",
         "psr",
@@ -18,17 +18,20 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
+        "ext-apcu": "*",
+        "ext-memcached": "*",
+        "ext-redis": "*",
+        "php": ">=8.2",
         "psr/cache": "^3.0",
         "psr/simple-cache": "^3.0",
-        "qubus/config": "^2.0",
-        "qubus/exception": "^2.0",
-        "qubus/filesystem": "^2.0",
-        "qubus/support": "^2.3"
+        "qubus/config": "^3",
+        "qubus/exception": "^3",
+        "qubus/filesystem": "^3",
+        "qubus/support": "^3"
     },
     "require-dev": {
-        "laminas/laminas-coding-standard": "^2.0",
         "phpunit/phpunit": "^9.0",
+        "qubus/qubus-coding-standard": "^1.1",
         "squizlabs/php_codesniffer": "^3.5"
     },
     "autoload": {
