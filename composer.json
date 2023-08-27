@@ -18,9 +18,6 @@
         }
     ],
     "require": {
-        "ext-apcu": "*",
-        "ext-memcached": "*",
-        "ext-redis": "*",
         "php": ">=8.2",
         "psr/cache": "^3.0",
         "psr/simple-cache": "^3.0",
