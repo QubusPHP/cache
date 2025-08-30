@@ -16,6 +16,8 @@ namespace Qubus\Tests\Cache;
 
 use DateInterval;
 use PHPUnit\Framework\TestCase;
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use Qubus\Cache\TypeException;
 use stdClass;
 use TypeError;
@@ -34,15 +36,15 @@ use function str_repeat;
 abstract class SimpleCacheTest extends TestCase
 {
     /** @var array $skippedTests Array with functionName => reason. */
-    protected $skippedTests = [];
+    protected array $skippedTests = [];
 
-    /** @var CacheInterface */
-    protected $cache;
+    /** @var ?CacheInterface */
+    protected ?CacheInterface $cache = null;
 
     /**
      * @return CacheInterface that is used in the tests
      */
-    abstract public function createSimpleCache();
+    abstract public function createSimpleCache(): CacheInterface;
 
     /**
      * Advance time perceived by the cache for the purposes of testing TTL.
@@ -54,7 +56,7 @@ abstract class SimpleCacheTest extends TestCase
      *
      * @param int $seconds
      */
-    public function advanceTime($seconds)
+    public function advanceTime($seconds): void
     {
         sleep($seconds);
     }
@@ -62,7 +64,7 @@ abstract class SimpleCacheTest extends TestCase
     /**
      * @before
      */
-    public function setupService()
+    public function setupService(): void
     {
         $this->cache = $this->createSimpleCache();
     }
@@ -70,11 +72,9 @@ abstract class SimpleCacheTest extends TestCase
     /**
      * @after
      */
-    public function tearDownService()
+    public function tearDownService(): void
     {
-        if ($this->cache !== null) {
-            $this->cache->clear();
-        }
+        $this->cache?->clear();
     }
 
     /**
@@ -82,7 +82,7 @@ abstract class SimpleCacheTest extends TestCase
      *
      * @return array
      */
-    public static function validKeys()
+    public static function validKeys(): array
     {
         return [
             ['AbC19_.'],
@@ -95,7 +95,7 @@ abstract class SimpleCacheTest extends TestCase
      *
      * @return array
      */
-    public static function validData()
+    public static function validData(): array
     {
         return [
             ['AbC19_.'],
@@ -108,6 +108,9 @@ abstract class SimpleCacheTest extends TestCase
         ];
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSet()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -121,6 +124,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @medium
+     * @throws InvalidArgumentException
      */
     public function testSetTtl()
     {
@@ -141,6 +145,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key2'), 'Value must expire after ttl.');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSetExpiredTtl()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -163,6 +170,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertFalse($this->cache->has('key1'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testGet()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -176,6 +186,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals('value', $this->cache->get('key', 'foo'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDelete()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -188,6 +201,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key'), 'Values must be deleted on delete()');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testClear()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -200,6 +216,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key'), 'Values must be deleted on clear()');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSetMultiple()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -212,6 +231,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals('value1', $this->cache->get('key1'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSetMultipleWithIntegerArrayKey()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -225,6 +247,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @medium
+     * @throws InvalidArgumentException
      */
     public function testSetMultipleTtl()
     {
@@ -245,6 +268,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key4'), 'Value must expire after ttl.');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSetMultipleExpiredTtl()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -259,6 +285,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key1'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testGetMultiple()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -289,6 +318,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertSame(['key2', 'key3', 'key4'], $keys);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDeleteMultiple()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -308,6 +340,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key1'), 'Values must be deleted on deleteMultiple()');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testHas()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -319,6 +354,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertTrue($this->cache->has('key0'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testBasicUsageWithLongKey()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -340,6 +378,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertFalse($this->cache->has($key));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testGetMultipleNoIterable()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -350,6 +391,9 @@ abstract class SimpleCacheTest extends TestCase
         $result = $this->cache->getMultiple('key');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testSetMultipleNoIterable()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -360,6 +404,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->cache->setMultiple('key');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDeleteMultipleNoIterable()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -370,6 +417,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->cache->deleteMultiple('key');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testNullOverwrite()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -382,6 +432,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertNull($this->cache->get('key'), 'Setting null to a key must overwrite previous value');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeString()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -394,6 +447,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertTrue(is_string($result), 'Wrong data type. If we store a string we must get an string back.');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeInteger()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -406,6 +462,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertTrue(is_int($result), 'Wrong data type. If we store an int we must get an int back.');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeFloat()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -419,6 +478,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals($float, $result);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeBoolean()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -432,6 +494,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertTrue($this->cache->has('key'), 'has() should return true when true are stored. ');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeArray()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -445,6 +510,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals($array, $result);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testDataTypeObject()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -459,6 +527,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals($object, $result);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testBinaryData()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -478,6 +549,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @dataProvider validKeys
+     * @throws InvalidArgumentException
      */
     public function testSetValidKeys($key)
     {
@@ -491,6 +563,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @dataProvider validKeys
+     * @throws InvalidArgumentException
      */
     public function testSetMultipleValidKeys($key)
     {
@@ -511,6 +584,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @dataProvider validData
+     * @throws InvalidArgumentException
      */
     public function testSetValidData($data)
     {
@@ -524,6 +598,7 @@ abstract class SimpleCacheTest extends TestCase
 
     /**
      * @dataProvider validData
+     * @throws InvalidArgumentException
      */
     public function testSetMultipleValidData($data)
     {
@@ -541,6 +616,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertSame(['key'], $keys);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testObjectAsDefaultValue()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -552,6 +630,9 @@ abstract class SimpleCacheTest extends TestCase
         $this->assertEquals($obj, $this->cache->get('key', $obj));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testObjectDoesNotChangeInCache()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {

@@ -11,7 +11,7 @@ use Qubus\Cache\Psr6\TaggablePsr6PoolAdapter;
 class TaggableInMemoryCachePsr6IntegrationTest extends TaggableCachePoolTest
 {
     /** @return TaggablePsr6PoolAdapter */
-    public function createCachePool()
+    public function createCachePool(): \Qubus\Cache\Psr6\TaggableCacheItemPool
     {
         return TaggablePsr6PoolAdapter::makeTaggable(new ItemPool(new InMemoryCacheAdapter()));
     }

@@ -8,13 +8,17 @@ use Qubus\Cache\Adapter\FileSystemCacheAdapter;
 use Qubus\Cache\Psr6\ItemPool;
 use Qubus\Cache\Psr6\TaggablePsr6PoolAdapter;
 use Qubus\Config\Collection;
+use Qubus\Exception\Exception;
 use Qubus\FileSystem\Adapter\LocalFlysystemAdapter;
 use Qubus\FileSystem\FileSystem;
 
 class TaggableFileSystemCachePsr6IntegrationTest extends TaggableCachePoolTest
 {
-    /** @return TaggablePsr6PoolAdapter */
-    public function createCachePool()
+    /**
+     * @return TaggablePsr6PoolAdapter
+     * @throws Exception
+     */
+    public function createCachePool(): \Qubus\Cache\Psr6\TaggableCacheItemPool
     {
         $config = Collection::factory([
             'path' => __DIR__ . '/config',

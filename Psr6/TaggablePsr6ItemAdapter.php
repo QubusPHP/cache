@@ -38,7 +38,7 @@ use function strcspn;
  *
  * @author Magnus Nordlander <magnus@fervo.se>
  */
-final class TaggablePsr6ItemAdapter implements TaggableCacheItem
+class TaggablePsr6ItemAdapter implements TaggableCacheItem
 {
     /** @var bool $initialized */
     private bool $initialized = false;

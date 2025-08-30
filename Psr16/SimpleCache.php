@@ -29,7 +29,7 @@ final class SimpleCache implements CacheInterface
 {
     use ValidatableKeyAware;
 
-    public const CACHE_FLAG = "@psr16_";
+    public const string CACHE_FLAG = "@psr16_";
 
     public function __construct(
         private readonly CacheAdapter $adapter,

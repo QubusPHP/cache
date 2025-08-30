@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace Qubus\Tests\Cache;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\InvalidArgumentException;
+use Qubus\Cache\Psr6\TaggableCacheItemPool;
 use Qubus\Cache\TypeException;
 
 use function is_array;
@@ -22,20 +24,20 @@ use function is_array;
 abstract class TaggableCachePoolTest extends TestCase
 {
     /** @var array $skippedTests Array with functionName => reason. */
-    protected $skippedTests = [];
+    protected array $skippedTests = [];
 
-    /** @var TaggableCacheItemPoolInterface */
-    protected $cache;
+    /** @var ?TaggableCacheItemPool */
+    protected ?TaggableCacheItemPool $cache = null;
 
     /**
-     * @return TaggableCacheItemPoolInterface that is used in the tests
+     * @return TaggableCacheItemPool that is used in the tests
      */
-    abstract public function createCachePool();
+    abstract public function createCachePool(): TaggableCacheItemPool;
 
     /**
      * @before
      */
-    public function setupService()
+    public function setupService(): void
     {
         $this->cache = $this->createCachePool();
     }
@@ -43,13 +45,14 @@ abstract class TaggableCachePoolTest extends TestCase
     /**
      * @after
      */
-    public function tearDownService()
+    public function tearDownService(): void
     {
-        if ($this->cache !== null) {
-            $this->cache->clear();
-        }
+        $this->cache?->clear();
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testMultipleTags()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -74,6 +77,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $this->assertTrue($this->cache->hasItem('key4'));
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testPreviousTag()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -95,6 +101,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $this->assertCount(1, $item->getPreviousTags());
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testPreviousTagDeferred()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -112,6 +121,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $this->assertCount(1, $item->getPreviousTags());
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testTagAccessorWithEmptyTag()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -123,6 +135,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $item->setTags(['']);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testTagAccessorDuplicateTags()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -140,6 +155,7 @@ abstract class TaggableCachePoolTest extends TestCase
     /**
      * The tag must be removed whenever we remove an item. If not, when creating a new item
      * with the same key will get the same tags.
+     * @throws InvalidArgumentException
      */
     public function testRemoveTagWhenItemIsRemoved()
     {
@@ -166,6 +182,9 @@ abstract class TaggableCachePoolTest extends TestCase
         );
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testClearPool()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -187,6 +206,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $this->assertTrue($this->cache->hasItem('key'), 'Tags should be removed when the pool was cleared.');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testInvalidateTag()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -214,6 +236,9 @@ abstract class TaggableCachePoolTest extends TestCase
         $this->assertTrue($this->cache->hasItem('key'), 'Item key list should be removed when clearing the tags');
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function testInvalidateTags()
     {
         if (isset($this->skippedTests[__FUNCTION__])) {
@@ -241,6 +266,7 @@ abstract class TaggableCachePoolTest extends TestCase
 
     /**
      * When an item is overwritten we need to clear tags for original item.
+     * @throws InvalidArgumentException
      */
     public function testTagsAreCleanedOnSave()
     {

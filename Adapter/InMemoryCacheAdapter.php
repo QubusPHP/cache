@@ -39,10 +39,6 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
      */
     public function get(string $key): mixed
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string.');
-        }
-
         // expired data should be deleted first.
         if (! $this->has($key)) {
             return null;
@@ -94,10 +90,6 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
      */
     public function has(string $key): bool
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string');
-        }
-
         if (! isset($this->cache[$key])) {
             return false;
         }
@@ -145,14 +137,14 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
         $this->deleteMultiple($keys);
     }
 
-    private function convertTtl(?int $ttl): int|QubusDateTimeImmutable
+    private function convertTtl(int|DateInterval|null $ttl): int|QubusDateTimeImmutable
     {
         if ($ttl instanceof DateInterval) {
             $ttl = DateIntervalConverter::convert($ttl);
         }
 
         return match (true) {
-            $ttl instanceof DateInterval => (new QubusDateTimeImmutable())->add($ttl),
+            $ttl instanceof DateInterval => new QubusDateTimeImmutable()->add($ttl),
             is_int($ttl) => new QubusDateTimeImmutable("now +$ttl seconds"),
             is_null__($ttl) => time() + 315360000 //ten years
         };

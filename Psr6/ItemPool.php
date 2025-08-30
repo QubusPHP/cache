@@ -39,7 +39,7 @@ final class ItemPool implements CacheItemPoolInterface
     /** @var CacheItemInterface[] $deferred */
     protected array $deferredItems = [];
 
-    public const CACHE_FLAG = "@psr6_";
+    public const string CACHE_FLAG = "@psr6_";
 
     /**
      */
@@ -77,7 +77,7 @@ final class ItemPool implements CacheItemPoolInterface
 
         $value = $this->adapter->get($this->validateKey($key));
 
-        return new Item($key, $value, null, null === $value ? false : true);
+        return new Item($key, $value, null, !(null === $value));
     }
 
     /**

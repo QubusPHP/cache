@@ -18,7 +18,8 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.4",
+        "predis/predis": "^3.2",
         "psr/cache": "^3.0",
         "psr/simple-cache": "^3.0",
         "qubus/config": "^3",
@@ -27,9 +28,7 @@
         "qubus/support": "^3"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.0",
-        "qubus/qubus-coding-standard": "^1.1",
-        "squizlabs/php_codesniffer": "^3.5"
+        "qubus/qubus-coding-standard": "^2"
     },
     "autoload": {
         "psr-4": {
@@ -54,7 +53,8 @@
         "optimize-autoloader": true,
         "sort-packages": true,
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "pestphp/pest-plugin": true
         }
     }
 }

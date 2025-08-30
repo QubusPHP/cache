@@ -15,6 +15,12 @@ namespace Qubus\Cache\Adapter;
 
 use APCuIterator;
 
+use function apcu_clear_cache;
+use function apcu_delete;
+use function apcu_exists;
+use function apcu_fetch;
+use function apcu_store;
+
 class ApcuCacheAdapter extends Multiple implements CacheAdapter
 {
     /**
@@ -24,7 +30,9 @@ class ApcuCacheAdapter extends Multiple implements CacheAdapter
      */
     public function get(string $key): mixed
     {
-        return false !== $value = apcu_fetch($key) ? $value : null;
+        $value = apcu_fetch($key);
+
+        return false !== $value ? $value : null;
     }
 
     /**

@@ -22,7 +22,7 @@ use Qubus\Support\DateTime\QubusDateTimeImmutable;
 use function is_int;
 use function Qubus\Support\Helpers\is_null__;
 
-final class Item implements CacheItemInterface
+class Item implements CacheItemInterface
 {
     /** @var DateTimeInterface|DateInterval|int|null $expiration */
     protected DateTimeInterface|DateInterval|int|null $expiration;
@@ -30,7 +30,7 @@ final class Item implements CacheItemInterface
     /**
      * Default value to use as default expiration date.
      */
-    public const EXPIRATION = 'now +100 years';
+    public const string EXPIRATION = 'now +100 years';
 
     /**
      * @param string $key Cache key.
@@ -111,7 +111,7 @@ final class Item implements CacheItemInterface
     public function expiresAfter(int|DateInterval|null $time): static
     {
         $this->expiration = match (true) {
-            $time instanceof DateInterval => (new QubusDateTimeImmutable())->add($time),
+            $time instanceof DateInterval => new QubusDateTimeImmutable()->add($time),
             is_int($time) => new QubusDateTimeImmutable("now +$time seconds"),
             is_null__($time) => new QubusDateTimeImmutable(self::EXPIRATION)
         };
@@ -132,7 +132,7 @@ final class Item implements CacheItemInterface
      */
     public function getExpiresInSeconds(): int
     {
-        return $this->getExpiresAt()->getTimestamp() - (new QubusDateTimeImmutable('now'))->getTimestamp();
+        return $this->getExpiresAt()->getTimestamp() - new QubusDateTimeImmutable('now')->getTimestamp();
     }
 
     /**
@@ -140,6 +140,6 @@ final class Item implements CacheItemInterface
      */
     public function isExpired(): bool
     {
-        return (new QubusDateTimeImmutable('now'))->getTimestamp() > $this->getExpiresAt()->getTimestamp();
+        return new QubusDateTimeImmutable('now')->getTimestamp() > $this->getExpiresAt()->getTimestamp();
     }
 }

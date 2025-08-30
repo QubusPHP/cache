@@ -45,10 +45,6 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
      */
     public function get(string $key): mixed
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string.');
-        }
-
         // expired data should be deleted first.
         if (! $this->has($key)) {
             return null;
@@ -58,21 +54,16 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
             $cache = unserialize($this->operator->read($key));
 
             return $cache['value'];
-        } catch (UnableToReadFile|FilesystemException $ex) {
+        } catch (UnableToReadFile | FilesystemException $ex) {
             return null;
         }
     }
 
     /**
      * {@inheritdoc}
-     * @throws TypeException
      */
     public function set(string $key, mixed $value, ?int $ttl): bool
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string.');
-        }
-
         $expire = $this->convertTtl($ttl);
 
         $cache = [
@@ -83,7 +74,7 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
         try {
             $this->operator->write($key, serialize($cache));
-        } catch (UnableToWriteFile|FilesystemException $ex) {
+        } catch (UnableToWriteFile | FilesystemException $ex) {
             return false;
         }
 
@@ -92,14 +83,10 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
-     * @throws TypeException|FilesystemException
+     * @throws FilesystemException
      */
     public function delete(string $key): bool
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string');
-        }
-
         // Leaving this here in case it is needed based on some unforseen circumstance.
         /*if (! $this->has($key)) {
             return true;
@@ -143,10 +130,6 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
      */
     public function has(string $key): bool
     {
-        if (! is_string($key)) {
-            throw new TypeException('$key must be a string');
-        }
-
         if (is_false__($this->operator->fileExists($key))) {
             return false;
         }
@@ -167,14 +150,14 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
         return true;
     }
 
-    private function convertTtl(?int $ttl): int|QubusDateTimeImmutable
+    private function convertTtl(int|DateInterval|null $ttl): int|QubusDateTimeImmutable
     {
         if ($ttl instanceof DateInterval) {
             $ttl = DateIntervalConverter::convert($ttl);
         }
 
         return match (true) {
-            $ttl instanceof DateInterval => (new QubusDateTimeImmutable())->add($ttl),
+            $ttl instanceof DateInterval => new QubusDateTimeImmutable()->add($ttl),
             is_int($ttl) => new QubusDateTimeImmutable("now +$ttl seconds"),
             is_null__($ttl) => time() + 315360000 //ten years
         };

@@ -15,7 +15,6 @@ namespace Qubus\Cache\Psr6;
 
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-
 use Psr\Cache\InvalidArgumentException;
 
 use function array_filter;
@@ -92,12 +91,9 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     {
         $items = $this->cachePool->getItems($keys);
 
-        $wrappedItems = [];
-        foreach ($items as $key => $item) {
-            $wrappedItems[$key] = TaggablePsr6ItemAdapter::makeTaggable($item);
-        }
-
-        return $wrappedItems;
+        return array_map(function ($item) {
+            return TaggablePsr6ItemAdapter::makeTaggable($item);
+        }, (array) $items);
     }
 
     /**
@@ -231,17 +227,16 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     }
 
     /**
-     * @return $this
+     * @param TaggablePsr6ItemAdapter $item
+     * @return void
      * @throws InvalidArgumentException
      */
-    private function saveTags(TaggablePsr6ItemAdapter $item): static
+    private function saveTags(TaggablePsr6ItemAdapter $item): void
     {
         $tags = $item->getTags();
         foreach ($tags as $tag) {
             $this->appendListItem($this->getTagKey($tag), $item->getKey());
         }
-
-        return $this;
     }
 
     /**
@@ -278,15 +273,14 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     /**
      * Removes the key form all tag lists.
      *
-     * @return $this
+     * @param string $key
+     * @return void
      * @throws InvalidArgumentException
      */
-    private function preRemoveItem(string $key): static
+    private function preRemoveItem(string $key): void
     {
         $item = $this->getItem($key);
         $this->removeTagEntries($item);
-
-        return $this;
     }
 
     /**

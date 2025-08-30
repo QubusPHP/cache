@@ -4,7 +4,7 @@
  * Qubus\Cache
  *
  * @link       https://github.com/QubusPHP/cache
- * @copyright  2021
+ * @copyright  2025
  * @author     Joshua Parker <joshua@joshuaparker.dev>
  * @license    https://opensource.org/licenses/mit-license.php MIT License
  */
@@ -14,90 +14,95 @@ declare(strict_types=1);
 namespace Qubus\Cache\Adapter;
 
 use Closure;
-use Redis;
-use RedisException;
+use Predis\ClientInterface;
+use Qubus\Cache\TypeException;
 
 use function array_combine;
 use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_values;
-use function Qubus\Support\Helpers\is_false__;
-use function Qubus\Support\Helpers\is_null__;
+use function serialize;
+use function unserialize;
 
-class RedisCacheAdapter extends Multiple implements CacheAdapter
+class PredisCacheAdapter extends Multiple implements CacheAdapter
 {
-    public function __construct(private Redis $redis)
+    public function __construct(private readonly ClientInterface $client)
     {
     }
 
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::get()
      */
     public function get(string $key): mixed
     {
-        $value = $this->redis->get($key);
-
-        return false === $value ? null : $value;
+        return $this->client->exists($key) ? unserialize($this->client->get($key)) : null;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
+     * @throws TypeException
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
     public function set(string $key, mixed $value, ?int $ttl): bool
     {
-        return is_null__($ttl) ? $this->redis->set($key, $value) : $this->redis->setEx($key, $ttl, $value);
+        if (is_int($ttl)) {
+            $expires = $ttl;
+        } elseif ($ttl === null) {
+            $expires = (int) 0;
+        } else {
+            throw new TypeException("Invalid TTL value.");
+        }
+
+        if ($expires > 0) {
+            return 'OK' === $this->client->setex(key: $key, seconds: $expires, value: serialize($value))->getPayload();
+        } else {
+            return 'OK' === $this->client->set(key: $key, value: serialize($value))->getPayload();
+        }
     }
 
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::delete()
      */
     public function delete(string $key): bool
     {
-        return 0 !== $this->redis->del($key);
+        return 0 !== $this->client->del($key);
     }
 
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::has()
      */
     public function has(string $key): bool
     {
-        return 0 !== $this->redis->exists($key);
+        return 0 !== $this->client->exists($key);
     }
 
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::getMultiple()
      */
     public function getMultiple(array $keys): ?array
     {
-        return array_map(function ($result) {
-            return is_false__($result) ? null : $result;
-        }, $this->pipeline(function () use ($keys): void {
-            foreach ($keys as $key) {
-                $this->redis->get($key);
-            }
-        }));
+        $result = [];
+        foreach ($keys as $key) {
+            $value = $this->client->get($key);
+            $result[$key] = $value ? unserialize($value) : null;
+        }
+
+        return $result;
     }
 
     /**
      * {@inheritdoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::setMultiple()
      */
     public function setMultiple(array $values): ?array
@@ -107,9 +112,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
         foreach (
             array_combine(array_keys($values), $this->pipeline(function () use ($values): void {
                 foreach ($values as $key => $value) {
-                    is_null__($value['ttl']) ?
-                    $this->redis->set($key, $value['value']) :
-                    $this->redis->setEx($key, $value['ttl'], $value['value']);
+                    $this->set($key, $value['value'], $value['ttl'] ?? null);
                 }
             })) as $key => $result
         ) {
@@ -124,7 +127,6 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritdoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::deleteMultiple()
      */
     public function deleteMultiple(array $keys): ?array
@@ -136,7 +138,7 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
             return null;
         }, $this->pipeline(function () use ($keys): void {
             foreach ($keys as $key) {
-                $this->redis->del($key);
+                $this->client->del($key);
             }
         }), $keys));
 
@@ -146,38 +148,18 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
-     * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
     public function purge(?string $pattern): void
     {
-        if (is_null__($pattern)) {
-            $this->redis->flushAll();
-
-            return;
-        }
-
-        if (null !== $prefix = $this->redis->getOption(Redis::OPT_PREFIX)) {
-            $this->redis->setOption(Redis::OPT_PREFIX, "");
-        }
-
-        while ($keys = $this->redis->scan($iterator, "*{$pattern}*", 1000)) {
-            $this->deleteMultiple($keys);
-        }
-
-        if (! is_null__($prefix)) {
-            $this->redis->setOption(Redis::OPT_PREFIX, $prefix);
-        }
+        $this->client->flushAll();
     }
 
-    /**
-     * @throws RedisException
-     */
-    private function pipeline(Closure $action): array
+    private function pipeline(Closure $action): ?array
     {
-        $this->redis->multi(Redis::PIPELINE);
+        $this->client->multi();
         $action->call($this);
 
-        return $this->redis->exec();
+        return $this->client->exec();
     }
 }

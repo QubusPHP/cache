@@ -31,7 +31,9 @@ class MemcachedCacheAdapter extends Multiple implements CacheAdapter
      */
     public function get(string $key): mixed
     {
-        return false !== $value = $this->memcached->get($key) ? $value : null;
+        $value = $this->memcached->get($key);
+
+        return false !== $value ? $value : null;
     }
 
     /**
