@@ -28,15 +28,12 @@ abstract class BaseCache implements CacheInterface, CacheItemPoolInterface
 
     protected CacheInterface $cache;
 
-    /** @var CacheInterface|CacheAdapter|null $adapter */
-    protected CacheInterface|CacheAdapter|null $adapter;
+    protected CacheAdapter $adapter;
 
     public function __construct(int|null|DateInterval $ttl = null, ?string $namespace = null)
     {
         $this->cache = new SimpleCache($this->adapter, $ttl, $namespace ?? 'default');
         $this->pool = new ItemPool($this->adapter, $ttl, $namespace ?? 'default');
-
-        unset($this->adapter);
     }
 
     /**

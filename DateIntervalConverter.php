@@ -14,20 +14,14 @@ declare(strict_types=1);
 namespace Qubus\Cache;
 
 use DateInterval;
+use DateTimeImmutable;
 
 abstract class DateIntervalConverter
 {
-    public static function convert(DateInterval $interval): ?int
+    public static function convert(DateInterval $interval): int
     {
-        if ($interval->invert) {
-            return null;
-        }
+        $now = new DateTimeImmutable();
 
-        return $interval->y * 31536000
-        + $interval->m * 2628000
-        + $interval->d * 87600
-        + $interval->h * 3600
-        + $interval->i * 60
-        + $interval->s;
+        return $now->add($interval)->getTimestamp() - $now->getTimestamp();
     }
 }

@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace Qubus\Tests\Cache;
 
+use PHPUnit\Framework\Attributes\After;
+use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\InvalidArgumentException;
 use Qubus\Cache\Psr6\TaggableCacheItemPool;
@@ -34,17 +36,13 @@ abstract class TaggableCachePoolTest extends TestCase
      */
     abstract public function createCachePool(): TaggableCacheItemPool;
 
-    /**
-     * @before
-     */
+    #[Before]
     public function setupService(): void
     {
         $this->cache = $this->createCachePool();
     }
 
-    /**
-     * @after
-     */
+    #[After]
     public function tearDownService(): void
     {
         $this->cache?->clear();

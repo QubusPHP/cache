@@ -4,28 +4,24 @@ declare(strict_types=1);
 
 namespace Qubus\Tests\Cache;
 
+use League\Flysystem\Filesystem;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 use Qubus\Cache\Adapter\FileSystemCacheAdapter;
 use Qubus\Cache\Psr6\ItemPool;
 use Qubus\Cache\Psr6\TaggablePsr6PoolAdapter;
-use Qubus\Config\Collection;
-use Qubus\Exception\Exception;
-use Qubus\FileSystem\Adapter\LocalFlysystemAdapter;
-use Qubus\FileSystem\FileSystem;
+
+use function getmypid;
+use function sys_get_temp_dir;
 
 class TaggableFileSystemCachePsr6IntegrationTest extends TaggableCachePoolTest
 {
-    /**
-     * @return TaggablePsr6PoolAdapter
-     * @throws Exception
-     */
+    /** @return TaggablePsr6PoolAdapter */
     public function createCachePool(): \Qubus\Cache\Psr6\TaggableCacheItemPool
     {
-        $config = Collection::factory([
-            'path' => __DIR__ . '/config',
-        ]);
-
-        $localAdapter = new LocalFlysystemAdapter($config);
-        $filesystem = new FileSystem($localAdapter);
+        $localAdapter = new LocalFilesystemAdapter(
+            sys_get_temp_dir() . '/qubus-cache-tests-taggable-' . getmypid()
+        );
+        $filesystem = new Filesystem($localAdapter);
 
         return TaggablePsr6PoolAdapter::makeTaggable(new ItemPool(new FileSystemCacheAdapter($filesystem)));
     }

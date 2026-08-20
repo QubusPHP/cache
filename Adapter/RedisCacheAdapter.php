@@ -18,10 +18,8 @@ use Redis;
 use RedisException;
 
 use function array_combine;
-use function array_filter;
 use function array_keys;
 use function array_map;
-use function array_values;
 use function Qubus\Support\Helpers\is_false__;
 use function Qubus\Support\Helpers\is_null__;
 
@@ -50,8 +48,13 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
      * @throws RedisException
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
+        if (null !== $ttl && $ttl <= 0) {
+            $this->redis->del($key);
+            return true;
+        }
+
         return is_null__($ttl) ? $this->redis->set($key, $value) : $this->redis->setEx($key, $ttl, $value);
     }
 
@@ -63,7 +66,9 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
      */
     public function delete(string $key): bool
     {
-        return 0 !== $this->redis->del($key);
+        $this->redis->del($key);
+
+        return true;
     }
 
     /**
@@ -129,18 +134,13 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
      */
     public function deleteMultiple(array $keys): ?array
     {
-        $misses = array_filter(array_map(function (bool $result, string $key): ?string {
-            if (! $result) {
-                return $key;
-            }
-            return null;
-        }, $this->pipeline(function () use ($keys): void {
+        $this->pipeline(function () use ($keys): void {
             foreach ($keys as $key) {
                 $this->redis->del($key);
             }
-        }), $keys));
+        });
 
-        return empty($misses) ? null : array_values($misses);
+        return null;
     }
 
     /**
@@ -161,12 +161,15 @@ class RedisCacheAdapter extends Multiple implements CacheAdapter
             $this->redis->setOption(Redis::OPT_PREFIX, "");
         }
 
-        while ($keys = $this->redis->scan($iterator, "*{$pattern}*", 1000)) {
-            $this->deleteMultiple($keys);
-        }
-
-        if (! is_null__($prefix)) {
-            $this->redis->setOption(Redis::OPT_PREFIX, $prefix);
+        try {
+            $iterator = null;
+            while ($keys = $this->redis->scan($iterator, "*{$pattern}*", 1000)) {
+                $this->deleteMultiple($keys);
+            }
+        } finally {
+            if (! is_null__($prefix)) {
+                $this->redis->setOption(Redis::OPT_PREFIX, $prefix);
+            }
         }
     }
 

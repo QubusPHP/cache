@@ -16,6 +16,7 @@ namespace Qubus\Cache\Psr6;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
+use Qubus\Cache\TypeException;
 
 use function array_filter;
 use function array_merge;
@@ -90,7 +91,6 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     public function getItems(array $keys = []): iterable
     {
         $items = $this->cachePool->getItems($keys);
-
         return array_map(function ($item) {
             return TaggablePsr6ItemAdapter::makeTaggable($item);
         }, (array) $items);
@@ -111,7 +111,7 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
     {
         $ret = $this->cachePool->clear();
 
-        return $this->tagStorePool->clear() && $ret; // Is this acceptable?
+        return $this->tagStorePool === $this->cachePool ? $ret : $this->tagStorePool->clear() && $ret;
     }
 
     /**
@@ -142,6 +142,10 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
      */
     public function save(TaggableCacheItem|CacheItemInterface $item): bool
     {
+        if (! $item instanceof TaggablePsr6ItemAdapter) {
+            throw new TypeException('Cache items must be created by this taggable pool.');
+        }
+
         $this->removeTagEntries($item);
         $this->saveTags($item);
 
@@ -154,6 +158,10 @@ final class TaggablePsr6PoolAdapter implements TaggableCacheItemPool
      */
     public function saveDeferred(TaggableCacheItem|CacheItemInterface $item): bool
     {
+        if (! $item instanceof TaggablePsr6ItemAdapter) {
+            throw new TypeException('Cache items must be created by this taggable pool.');
+        }
+
         $this->saveTags($item);
 
         return $this->cachePool->saveDeferred($item->unwrap());

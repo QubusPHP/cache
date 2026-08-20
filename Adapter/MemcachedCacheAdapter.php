@@ -41,8 +41,13 @@ class MemcachedCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
+        if (null !== $ttl && $ttl <= 0) {
+            $this->memcached->delete($key);
+            return true;
+        }
+
         return $this->memcached->set($key, $value, $ttl ?? 0);
     }
 
@@ -53,7 +58,11 @@ class MemcachedCacheAdapter extends Multiple implements CacheAdapter
      */
     public function delete(string $key): bool
     {
-        return $this->memcached->delete($key);
+        if ($this->memcached->delete($key)) {
+            return true;
+        }
+
+        return Memcached::RES_NOTFOUND === $this->memcached->getResultCode();
     }
 
     /**
@@ -76,10 +85,11 @@ class MemcachedCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
-    public function purge(?string $pattern): void
+    public function purge(?string $pattern = null): void
     {
         if (is_null__($pattern)) {
             $this->memcached->flush();
+            return;
         }
 
         if ('' !== $prefix = $this->memcached->getOption(Memcached::OPT_PREFIX_KEY)) {

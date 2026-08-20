@@ -40,8 +40,13 @@ class ApcuCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
+        if (null !== $ttl && $ttl <= 0) {
+            apcu_delete($key);
+            return true;
+        }
+
         return apcu_store($key, $value, $ttl ?? 0);
     }
 
@@ -52,7 +57,7 @@ class ApcuCacheAdapter extends Multiple implements CacheAdapter
      */
     public function delete(string $key): bool
     {
-        return apcu_delete($key);
+        return ! apcu_exists($key) || apcu_delete($key);
     }
 
     /**
@@ -70,7 +75,7 @@ class ApcuCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
-    public function purge(?string $pattern): void
+    public function purge(?string $pattern = null): void
     {
         if (null === $pattern) {
             apcu_clear_cache();

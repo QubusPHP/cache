@@ -21,16 +21,13 @@ use Qubus\Cache\Adapter\CacheAdapter;
 use Qubus\Cache\DateIntervalConverter;
 use Qubus\Cache\Traits\ValidatableKeyAware;
 use Qubus\Cache\TypeException;
-use Qubus\Exception\Exception;
+use Qubus\Support\DateTime\QubusDateTimeImmutable;
 
-use function array_combine;
 use function array_key_exists;
-use function array_keys;
-use function array_map;
 use function count;
+use function in_array;
 use function is_int;
 use function is_object;
-use function Qubus\Support\Helpers\is_null__;
 
 final class ItemPool implements CacheItemPoolInterface
 {
@@ -41,14 +38,17 @@ final class ItemPool implements CacheItemPoolInterface
 
     public const string CACHE_FLAG = "@psr6_";
 
+    private readonly ?string $namespace;
+
     /**
      */
     public function __construct(
         private readonly CacheAdapter $adapter,
         private readonly int|null|DateInterval $ttl = null,
-        private readonly ?string $namespace = 'default',
+        ?string $namespace = 'default',
         private readonly ?int $autoCommitCount = null
     ) {
+        $this->namespace = $this->normalizeNamespace($namespace);
     }
 
     /**
@@ -66,8 +66,10 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function getItem(string $key): CacheItemInterface
     {
-        if (array_key_exists($this->validateKey($key), $this->deferredItems)) {
-            $value = $this->deferredItems[$this->validateKey($key)];
+        $validatedKey = $this->validateKey($key);
+
+        if (array_key_exists($validatedKey, $this->deferredItems)) {
+            $value = $this->deferredItems[$validatedKey];
             $item = is_object($value) ? clone $value : $value;
 
             $item->setHit(! $item->isExpired());
@@ -75,9 +77,10 @@ final class ItemPool implements CacheItemPoolInterface
             return $item;
         }
 
-        $value = $this->adapter->get($this->validateKey($key));
+        $value = $this->adapter->get($validatedKey);
+        $isHit = null !== $value || $this->adapter->has($validatedKey);
 
-        return new Item($key, $value, null, !(null === $value));
+        return new Item($key, $value, $this->defaultExpiration(), $isHit);
     }
 
     /**
@@ -89,13 +92,12 @@ final class ItemPool implements CacheItemPoolInterface
             return [];
         }
 
-        return array_combine(
-            $keys,
-            array_map(function (?string $item, string $key): CacheItemInterface {
-                return null !== $item ? new Item($item) :
-                    $this->deferredItems[$this->validateKey($key)] ?? new Item($key);
-            }, (array) $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys)), $keys)
-        );
+        $items = [];
+        foreach ($keys as $key) {
+            $items[$key] = $this->getItem($key);
+        }
+
+        return $items;
     }
 
     /**
@@ -103,14 +105,15 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function hasItem(string $key): bool
     {
-        if (isset($this->deferredItems[$this->validateKey($key)])) {
-            if ($this->deferredItems[$this->validateKey($key)]->isExpired()) {
+        $validatedKey = $this->validateKey($key);
+        if (isset($this->deferredItems[$validatedKey])) {
+            if ($this->deferredItems[$validatedKey]->isExpired()) {
                 return false;
             }
             return true;
         }
 
-        return $this->adapter->has($this->validateKey($key));
+        return $this->adapter->has($validatedKey);
     }
 
     /**
@@ -130,11 +133,10 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function deleteItem(string $key): bool
     {
-        $this->adapter->delete($this->validateKey($key));
+        $validatedKey = $this->validateKey($key);
+        unset($this->deferredItems[$validatedKey]);
 
-        unset($this->deferredItems[$this->validateKey($key)]);
-
-        return true;
+        return ! $this->adapter->has($validatedKey) || $this->adapter->delete($validatedKey);
     }
 
     /**
@@ -142,11 +144,14 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function deleteItems(array $keys): bool
     {
+        $validatedKeys = [];
         foreach ($keys as $key) {
-            unset($this->deferredItems[$this->validateKey($key)]);
+            $validatedKey = $this->validateKey($key);
+            unset($this->deferredItems[$validatedKey]);
+            $validatedKeys[] = $validatedKey;
         }
 
-        return null === $this->adapter->deleteMultiple(array_map([$this, 'validateKey'], $keys));
+        return null === $this->adapter->deleteMultiple($validatedKeys);
     }
 
     /**
@@ -155,6 +160,10 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function save(CacheItemInterface $item): bool
     {
+        if (! $item instanceof Item) {
+            throw new TypeException('Cache items must be created by this pool.');
+        }
+
         if ($item->isExpired()) {
             return $this->deleteItem($item->getKey());
         }
@@ -172,9 +181,13 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function saveDeferred(CacheItemInterface $item): bool
     {
+        if (! $item instanceof Item) {
+            throw new TypeException('Cache items must be created by this pool.');
+        }
+
         $this->deferredItems[$this->validateKey($item->getKey())] = $item;
 
-        if (! is_null__($this->autoCommitCount) && count($this->deferredItems) >= $this->autoCommitCount) {
+        if (null !== $this->autoCommitCount && count($this->deferredItems) >= $this->autoCommitCount) {
             return $this->commit();
         }
 
@@ -186,32 +199,37 @@ final class ItemPool implements CacheItemPoolInterface
      */
     public function commit(): bool
     {
-        if (is_null__($this->deferredItems)) {
+        if ([] === $this->deferredItems) {
             return true;
         }
 
-        $result = null === $this->adapter->setMultiple(
-            array_combine(
-                array_keys($this->deferredItems),
-                array_map(function (CacheItemInterface $item): array {
-                    return [
-                        'key'   => $item->getKey(),
-                        'value' => $item->get(),
-                        "ttl"   => $this->getTtl($item->getExpiresInSeconds()),
-                    ];
-                }, $this->deferredItems)
-            )
-        );
+        $entries = array_map(function ($item) {
+            return [
+                'key' => $item->getKey(),
+                'value' => $item->get(),
+                'ttl' => $this->getTtl($item->getExpiresInSeconds()),
+            ];
+        }, $this->deferredItems);
 
-        $this->deferredItems = [];
+        $failedKeys = $this->adapter->setMultiple($entries);
+        if (null === $failedKeys) {
+            $this->deferredItems = [];
+            return true;
+        }
 
-        return $result;
+        foreach ($this->deferredItems as $key => $item) {
+            if (! in_array($key, $failedKeys, true)) {
+                unset($this->deferredItems[$key]);
+            }
+        }
+
+        return false;
     }
 
-    protected function getTtl(int|null|DateInterval $ttl): ?int
+    protected function getTtl(int|null|DateInterval $ttl = null): ?int
     {
         if (is_int($ttl)) {
-            return $ttl === -1 ? $this->ttl : $ttl;
+            return $ttl;
         }
 
         if ($ttl instanceof DateInterval) {
@@ -219,5 +237,14 @@ final class ItemPool implements CacheItemPoolInterface
         }
 
         return null;
+    }
+
+    private function defaultExpiration(): QubusDateTimeImmutable
+    {
+        $ttl = $this->getTtl($this->ttl);
+
+        return null === $ttl
+        ? new QubusDateTimeImmutable(Item::EXPIRATION)
+        : new QubusDateTimeImmutable("now +$ttl seconds");
     }
 }

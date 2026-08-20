@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="vendor/autoload.php"
-         backupGlobals="false"
-         backupStaticAttributes="false"
-         colors="true"
-         verbose="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
-         processIsolation="false"
-         stopOnFailure="false">
-    <testsuites>
-        <testsuite name="Cache Test Suite">
-            <directory>Tests</directory>
-        </testsuite>
-    </testsuites>
+<phpunit bootstrap="vendor/autoload.php" backupGlobals="false" colors="true" processIsolation="false" stopOnFailure="false" cacheDirectory=".phpunit.cache" backupStaticProperties="false">
+  <testsuites>
+    <testsuite name="Cache Test Suite">
+      <directory>Tests</directory>
+      <exclude>Tests/CachePoolTest.php</exclude>
+      <exclude>Tests/SimpleCacheTest.php</exclude>
+      <exclude>Tests/TaggableCachePoolTest.php</exclude>
+    </testsuite>
+  </testsuites>
 </phpunit>

@@ -4,26 +4,21 @@ declare(strict_types=1);
 
 namespace Qubus\Tests\Cache;
 
+use League\Flysystem\Filesystem;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 use Qubus\Cache\FileSystemCache;
-use Qubus\Config\Collection;
-use Qubus\Exception\Exception;
-use Qubus\FileSystem\Adapter\LocalFlysystemAdapter;
-use Qubus\FileSystem\FileSystem;
+
+use function getmypid;
+use function sys_get_temp_dir;
 
 class FileSystemCachePsr6IntegrationTest extends CachePoolTest
 {
-    /**
-     * @return FileSystemCache
-     * @throws Exception
-     */
+    /** @return FileSystemCache */
     public function createCachePool(): \Psr\Cache\CacheItemPoolInterface
     {
-        $config = Collection::factory([
-            'path' => __DIR__ . '/config',
-        ]);
+        $localAdapter = new LocalFilesystemAdapter(sys_get_temp_dir() . '/qubus-cache-tests-psr6-' . getmypid());
+        $filesystem = new Filesystem($localAdapter);
 
-        $localAdapter = new LocalFlysystemAdapter($config);
-        $filesystem = new FileSystem($localAdapter);
         return new FileSystemCache($filesystem);
     }
 }

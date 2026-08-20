@@ -27,4 +27,12 @@ final class FileSystemCache extends BaseCache
         $this->adapter = new FileSystemCacheAdapter($operator);
         parent::__construct($ttl, $namespace);
     }
+
+    /**
+     * Delete expired or malformed cache files.
+     */
+    public function prune(): bool
+    {
+        return $this->adapter->prune();
+    }
 }

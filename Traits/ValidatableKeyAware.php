@@ -43,18 +43,8 @@ trait ValidatableKeyAware
      */
     protected function validateKey(string $key): string
     {
-        if (null === $key) {
-            throw new TypeException('Cache key cannot be null.');
-        }
-
-        if (false === is_string($key)) {
-            throw new TypeException(
-                sprintf(
-                    'Argument "%s" is invalid. Must enter a string, "%s" given',
-                    $key,
-                    gettype($key)
-                )
-            );
+        if ('' === $key) {
+            throw new TypeException('Cache key cannot be empty.');
         }
 
         if (preg_match('#[' . preg_quote($this->reservedKeyCharacters()) . ']#', $key) > 0) {
@@ -77,29 +67,28 @@ trait ValidatableKeyAware
     }
 
     /**
-     * Checks if key is hashed.
-     *
-     * @param string $key
-     * @return bool
-     */
-    protected function isHashed(string $key): bool
-    {
-        return (bool) preg_match('/^[0-9a-f]{40}$/i', $key);
-    }
-
-    /**
-     * Affixes a prefix to the
+     * Affixes a prefix to the namespace.
      *
      * @param string $key
      * @return string
      */
     protected function prefix(string $key): string
     {
-        if (!$this->isHashed($key)) {
-            $key = sha1($key);
-        }
+        $key = sha1($key);
 
         return (null === $this->namespace) ? self::CACHE_FLAG . $key : self::CACHE_FLAG . "{$this->namespace}_{$key}";
+    }
+
+    /**
+     * Keep namespaces safe for filesystem paths, regular expressions, and glob patterns.
+     */
+    protected function normalizeNamespace(?string $namespace = null): ?string
+    {
+        if (null === $namespace || 1 === preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $namespace)) {
+            return $namespace;
+        }
+
+        return sha1($namespace);
     }
 
     /**

@@ -40,7 +40,7 @@ interface CacheAdapter
      * @param int|null $ttl Expiration time in seconds. Null means indefinite storage time.
      * @return bool True if the value has been stored successfully. False otherwise.
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool;
+    public function set(string $key, mixed $value, ?int $ttl = null): bool;
 
     /**
      * Sets multiple values into the cache store.
@@ -81,5 +81,5 @@ interface CacheAdapter
      *
      * @param string|null $pattern Regex pattern for targeting only certain keys or null to purge everything.
      */
-    public function purge(?string $pattern): void;
+    public function purge(?string $pattern = null): void;
 }

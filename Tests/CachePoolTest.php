@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace Qubus\Tests\Cache;
 
 use DateTime;
+use PHPUnit\Framework\Attributes\After;
+use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -52,17 +54,13 @@ abstract class CachePoolTest extends TestCase
      */
     abstract public function createCachePool(): CacheItemPoolInterface;
 
-    /**
-     * @before
-     */
+    #[Before]
     public function setupService(): void
     {
         $this->cache = $this->createCachePool();
     }
 
-    /**
-     * @after
-     */
+    #[After]
     public function tearDownService(): void
     {
         $this->cache?->clear();
@@ -266,7 +264,10 @@ abstract class CachePoolTest extends TestCase
         $return = $this->cache->clear();
 
         Assert::assertTrue($return, 'clear() must return true if cache was cleared. ');
-        Assert::assertFalse($this->cache->getItem('key')->isHit(), 'No item should be a hit after the cache is cleared. ');
+        Assert::assertFalse(
+            $this->cache->getItem('key')->isHit(),
+            'No item should be a hit after the cache is cleared. '
+        );
         Assert::assertFalse($this->cache->hasItem('key2'), 'The cache pool should be empty after it is cleared.');
     }
 
@@ -306,7 +307,10 @@ abstract class CachePoolTest extends TestCase
         Assert::assertFalse($this->cache->getItem('key')->isHit(), 'A deleted item should not be a hit.');
         Assert::assertFalse($this->cache->hasItem('key'), 'A deleted item should not be a in cache.');
 
-        Assert::assertTrue($this->cache->deleteItem('key2'), 'Deleting an item that does not exist should return true.');
+        Assert::assertTrue(
+            $this->cache->deleteItem('key2'),
+            'Deleting an item that does not exist should return true.'
+        );
     }
 
     /**
@@ -416,8 +420,14 @@ abstract class CachePoolTest extends TestCase
         $this->cache->saveDeferred($item);
 
         // They are not saved yet but should be a hit
-        Assert::assertTrue($this->cache->hasItem('key'), 'Deferred items should be considered as a part of the cache even before they are committed');
-        Assert::assertTrue($this->cache->getItem('key')->isHit(), 'Deferred items should be a hit even before they are committed');
+        Assert::assertTrue(
+            $this->cache->hasItem('key'),
+            'Deferred items should be considered as a part of the cache even before they are committed'
+        );
+        Assert::assertTrue(
+            $this->cache->getItem('key')->isHit(),
+            'Deferred items should be a hit even before they are committed'
+        );
         Assert::assertTrue($this->cache->getItem('key2')->isHit());
 
         $this->cache->commit();
@@ -442,8 +452,14 @@ abstract class CachePoolTest extends TestCase
         Assert::assertTrue($this->cache->getItem('key')->isHit());
 
         $this->cache->deleteItem('key');
-        Assert::assertFalse($this->cache->hasItem('key'), 'You must be able to delete a deferred item before committed. ');
-        Assert::assertFalse($this->cache->getItem('key')->isHit(), 'You must be able to delete a deferred item before committed. ');
+        Assert::assertFalse(
+            $this->cache->hasItem('key'),
+            'You must be able to delete a deferred item before committed. '
+        );
+        Assert::assertFalse(
+            $this->cache->getItem('key')->isHit(),
+            'You must be able to delete a deferred item before committed. '
+        );
 
         $this->cache->commit();
         Assert::assertFalse($this->cache->hasItem('key'), 'A deleted item should not reappear after commit. ');
@@ -460,7 +476,10 @@ abstract class CachePoolTest extends TestCase
         gc_collect_cycles();
 
         $cache = $this->createCachePool();
-        Assert::assertTrue($cache->getItem('key')->isHit(), 'A deferred item should automatically be committed on CachePool::__destruct().');
+        Assert::assertTrue(
+            $cache->getItem('key')->isHit(),
+            'A deferred item should automatically be committed on CachePool::__destruct().'
+        );
     }
 
     /**
@@ -604,7 +623,10 @@ abstract class CachePoolTest extends TestCase
 
         $item = $this->cache->getItem('key');
         Assert::assertTrue('5' === $item->get(), 'Wrong data type. If we store a string we must get an string back.');
-        Assert::assertTrue(is_string($item->get()), 'Wrong data type. If we store a string we must get an string back.');
+        Assert::assertTrue(
+            is_string($item->get()),
+            'Wrong data type. If we store a string we must get an string back.'
+        );
     }
 
     /**
@@ -638,7 +660,10 @@ abstract class CachePoolTest extends TestCase
         $item->set(null);
         $this->cache->save($item);
 
-        Assert::assertTrue($this->cache->hasItem('key'), 'Null is a perfectly acceptable cache value. hasItem() should return true when null are stored. ');
+        Assert::assertTrue(
+            $this->cache->hasItem('key'),
+            'Null is a perfectly acceptable cache value. hasItem() should return true when null are stored. '
+        );
         $item = $this->cache->getItem('key');
         Assert::assertTrue(null === $item->get(), 'Wrong data type. If we store null we must get an null back.');
         Assert::assertTrue(is_null__($item->get()), 'Wrong data type. If we store null we must get an null back.');
@@ -802,11 +827,19 @@ abstract class CachePoolTest extends TestCase
         $item->set('new value');
 
         $item = $this->cache->getItem('key');
-        Assert::assertEquals('value', $item->get(), 'Items that is put in the deferred queue should not get their values changed');
+        Assert::assertEquals(
+            'value',
+            $item->get(),
+            'Items that is put in the deferred queue should not get their values changed'
+        );
 
         $this->cache->commit();
         $item = $this->cache->getItem('key');
-        Assert::assertEquals('value', $item->get(), 'Items that is put in the deferred queue should not get their values changed');
+        Assert::assertEquals(
+            'value',
+            $item->get(),
+            'Items that is put in the deferred queue should not get their values changed'
+        );
     }
 
     /**

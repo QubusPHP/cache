@@ -20,10 +20,8 @@ use Qubus\Cache\DateIntervalConverter;
 use Qubus\Cache\Traits\ValidatableKeyAware;
 use Traversable;
 
-use function array_combine;
-use function array_keys;
-use function array_map;
 use function is_int;
+use function iterator_to_array;
 
 final class SimpleCache implements CacheInterface
 {
@@ -31,11 +29,14 @@ final class SimpleCache implements CacheInterface
 
     public const string CACHE_FLAG = "@psr16_";
 
+    private readonly ?string $namespace;
+
     public function __construct(
         private readonly CacheAdapter $adapter,
         private readonly int|null|DateInterval $ttl = null,
-        private readonly ?string $namespace = 'default'
+        ?string $namespace = 'default'
     ) {
+        $this->namespace = $this->normalizeNamespace($namespace);
     }
 
     /**
@@ -43,7 +44,10 @@ final class SimpleCache implements CacheInterface
      */
     public function get(string $key, mixed $default = null): mixed
     {
-        return (null !== $value = $this->adapter->get($this->validateKey($key))) ? $value : $default;
+        $validatedKey = $this->validateKey($key);
+        $value = $this->adapter->get($validatedKey);
+
+        return null !== $value || $this->adapter->has($validatedKey) ? $value : $default;
     }
 
     /**
@@ -59,7 +63,9 @@ final class SimpleCache implements CacheInterface
      */
     public function delete(string $key): bool
     {
-        return $this->adapter->delete($this->validateKey($key));
+        $validatedKey = $this->validateKey($key);
+
+        return ! $this->adapter->has($validatedKey) || $this->adapter->delete($validatedKey);
     }
 
     /**
@@ -81,9 +87,13 @@ final class SimpleCache implements CacheInterface
             $keys = iterator_to_array($keys, false);
         }
 
-        return array_combine($keys, array_map(function ($value) use ($default) {
-            return $value ?? $default;
-        }, (array) $this->adapter->getMultiple(array_map([$this, 'validateKey'], $keys))));
+        $values = [];
+        foreach ($keys as $key) {
+            $key = (string) $key;
+            $values[$key] = $this->get($key, $default);
+        }
+
+        return $values;
     }
 
     /**
@@ -92,20 +102,18 @@ final class SimpleCache implements CacheInterface
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         if ($values instanceof Traversable) {
-            $values = iterator_to_array($values, false);
+            $values = iterator_to_array($values);
         }
 
-        return null === $this->adapter->setMultiple(
-            array_combine(
-                array_map([$this, 'validateKey'], array_keys($values)),
-                array_map(function ($value) use ($ttl) {
-                    return [
-                        'value' => $value,
-                        'ttl'   => $this->getTtl($ttl),
-                    ];
-                }, $values)
-            )
-        );
+        $entries = [];
+        foreach ($values as $key => $value) {
+            $entries[$this->validateKey((string) $key)] = [
+                'value' => $value,
+                'ttl'   => $this->getTtl($ttl),
+            ];
+        }
+
+        return null === $this->adapter->setMultiple($entries);
     }
 
     /**
@@ -117,7 +125,12 @@ final class SimpleCache implements CacheInterface
             $keys = iterator_to_array($keys, false);
         }
 
-        return null === $this->adapter->deleteMultiple(array_map([$this, 'validateKey'], $keys));
+        $validatedKeys = [];
+        foreach ($keys as $key) {
+            $validatedKeys[] = $this->validateKey((string) $key);
+        }
+
+        return null === $this->adapter->deleteMultiple($validatedKeys);
     }
 
     /**
@@ -128,10 +141,12 @@ final class SimpleCache implements CacheInterface
         return $this->adapter->has($this->validateKey($key));
     }
 
-    private function getTtl(int|null|DateInterval $ttl): ?int
+    private function getTtl(int|null|DateInterval $ttl = null): ?int
     {
+        $ttl ??= $this->ttl;
+
         if (is_int($ttl)) {
-            return $ttl === 1 ? $this->ttl : $ttl;
+            return $ttl;
         }
 
         if ($ttl instanceof DateInterval) {

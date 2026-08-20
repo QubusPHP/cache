@@ -14,14 +14,12 @@ declare(strict_types=1);
 namespace Qubus\Cache\Adapter;
 
 use Closure;
+use Predis\Collection\Iterator\Keyspace;
 use Predis\ClientInterface;
 use Qubus\Cache\TypeException;
 
 use function array_combine;
-use function array_filter;
 use function array_keys;
-use function array_map;
-use function array_values;
 use function serialize;
 use function unserialize;
 
@@ -38,7 +36,9 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
      */
     public function get(string $key): mixed
     {
-        return $this->client->exists($key) ? unserialize($this->client->get($key)) : null;
+        $value = $this->client->get($key);
+
+        return null === $value ? null : @unserialize($value, ['allowed_classes' => true]);
     }
 
     /**
@@ -47,7 +47,7 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
      * @throws TypeException
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
         if (is_int($ttl)) {
             $expires = $ttl;
@@ -57,7 +57,10 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
             throw new TypeException("Invalid TTL value.");
         }
 
-        if ($expires > 0) {
+        if ($expires < 1 && null !== $ttl) {
+            $this->client->del($key);
+            return true;
+        } elseif ($expires > 0) {
             return 'OK' === $this->client->setex(key: $key, seconds: $expires, value: serialize($value))->getPayload();
         } else {
             return 'OK' === $this->client->set(key: $key, value: serialize($value))->getPayload();
@@ -71,7 +74,9 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
      */
     public function delete(string $key): bool
     {
-        return 0 !== $this->client->del($key);
+        $this->client->del($key);
+
+        return true;
     }
 
     /**
@@ -94,7 +99,7 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
         $result = [];
         foreach ($keys as $key) {
             $value = $this->client->get($key);
-            $result[$key] = $value ? unserialize($value) : null;
+            $result[] = null === $value ? null : @unserialize($value, ['allowed_classes' => true]);
         }
 
         return $result;
@@ -131,18 +136,13 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
      */
     public function deleteMultiple(array $keys): ?array
     {
-        $misses = array_filter(array_map(function (bool $result, string $key): ?string {
-            if (! $result) {
-                return $key;
-            }
-            return null;
-        }, $this->pipeline(function () use ($keys): void {
+        $this->pipeline(function () use ($keys): void {
             foreach ($keys as $key) {
                 $this->client->del($key);
             }
-        }), $keys));
+        });
 
-        return empty($misses) ? null : array_values($misses);
+        return null;
     }
 
     /**
@@ -150,9 +150,16 @@ class PredisCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
-    public function purge(?string $pattern): void
+    public function purge(?string $pattern = null): void
     {
-        $this->client->flushAll();
+        if (null === $pattern) {
+            $this->client->flushAll();
+            return;
+        }
+
+        foreach (new Keyspace($this->client, "*{$pattern}*", 1000) as $key) {
+            $this->client->del($key);
+        }
     }
 
     private function pipeline(Closure $action): ?array

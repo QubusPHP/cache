@@ -13,14 +13,7 @@ declare(strict_types=1);
 
 namespace Qubus\Cache\Adapter;
 
-use DateInterval;
-use Qubus\Cache\DateIntervalConverter;
-use Qubus\Cache\TypeException;
-use Qubus\Support\DateTime\QubusDateTimeImmutable;
-
 use function array_keys;
-use function is_int;
-use function is_string;
 use function preg_match;
 use function Qubus\Support\Helpers\is_null__;
 use function serialize;
@@ -34,7 +27,6 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
-     * @throws TypeException
      * @see \Qubus\Cache\Adapter\CacheAdapter::get()
      */
     public function get(string $key): mixed
@@ -54,13 +46,15 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::set()
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
-        $expire = $this->convertTtl($ttl);
+        if (null !== $ttl && $ttl <= 0) {
+            return $this->delete($key);
+        }
 
         $cache = [
             'key'   => $key,
-            'ttl'   => $expire,
+            'ttl'   => null === $ttl ? null : time() + $ttl,
             'value' => $value,
         ];
 
@@ -77,7 +71,6 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
     public function delete(string $key): bool
     {
         unset($this->cache[$key]);
-        $this->cache[$key] = null;
 
         return true;
     }
@@ -85,7 +78,6 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
     /**
      * {@inheritDoc}
      *
-     * @throws TypeException
      * @see \Qubus\Cache\Adapter\CacheAdapter::has()
      */
     public function has(string $key): bool
@@ -96,13 +88,7 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
 
         $data = unserialize($this->cache[$key]);
 
-        $expire = match (true) {
-            $data['ttl'] instanceof QubusDateTimeImmutable => $data['ttl']->getTimestamp(),
-            is_int($data['ttl']) => $data['ttl'],
-            is_null__($data['ttl']) => time() + 315360000 //ten years
-        };
-
-        if ($expire === 0 || $expire < time()) {
+        if (null !== $data['ttl'] && $data['ttl'] <= time()) {
             $this->delete($key);
             return false;
         }
@@ -115,7 +101,7 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
      *
      * @see \Qubus\Cache\Adapter\CacheAdapter::purge()
      */
-    public function purge(?string $pattern): void
+    public function purge(?string $pattern = null): void
     {
         if (empty($this->cache)) {
             return;
@@ -135,18 +121,5 @@ class InMemoryCacheAdapter extends Multiple implements CacheAdapter
         }
 
         $this->deleteMultiple($keys);
-    }
-
-    private function convertTtl(int|DateInterval|null $ttl): int|QubusDateTimeImmutable
-    {
-        if ($ttl instanceof DateInterval) {
-            $ttl = DateIntervalConverter::convert($ttl);
-        }
-
-        return match (true) {
-            $ttl instanceof DateInterval => new QubusDateTimeImmutable()->add($ttl),
-            is_int($ttl) => new QubusDateTimeImmutable("now +$ttl seconds"),
-            is_null__($ttl) => time() + 315360000 //ten years
-        };
     }
 }

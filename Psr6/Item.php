@@ -66,7 +66,7 @@ class Item implements CacheItemInterface
      */
     public function isHit(): bool
     {
-        return $this->isHit && ! $this->isExpired() && $this->value !== false;
+        return $this->isHit && ! $this->isExpired();
     }
 
     /**
@@ -95,7 +95,7 @@ class Item implements CacheItemInterface
     /**
      * {@inheritdoc}
      */
-    public function expiresAt(?DateTimeInterface $expiration): static
+    public function expiresAt(?DateTimeInterface $expiration = null): static
     {
         $this->expiration = match (true) {
             $expiration instanceof DateTimeInterface => $expiration,
@@ -108,7 +108,7 @@ class Item implements CacheItemInterface
     /**
      * {@inheritdoc}
      */
-    public function expiresAfter(int|DateInterval|null $time): static
+    public function expiresAfter(int|DateInterval|null $time = null): static
     {
         $this->expiration = match (true) {
             $time instanceof DateInterval => new QubusDateTimeImmutable()->add($time),
@@ -140,6 +140,6 @@ class Item implements CacheItemInterface
      */
     public function isExpired(): bool
     {
-        return new QubusDateTimeImmutable('now')->getTimestamp() > $this->getExpiresAt()->getTimestamp();
+        return new QubusDateTimeImmutable('now')->getTimestamp() >= $this->getExpiresAt()->getTimestamp();
     }
 }

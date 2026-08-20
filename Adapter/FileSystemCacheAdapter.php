@@ -13,22 +13,16 @@ declare(strict_types=1);
 
 namespace Qubus\Cache\Adapter;
 
-use DateInterval;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
-use League\Flysystem\UnableToDeleteFile;
-use League\Flysystem\UnableToReadFile;
-use League\Flysystem\UnableToWriteFile;
-use Qubus\Cache\DateIntervalConverter;
-use Qubus\Exception\Data\TypeException;
 use Qubus\Support\DateTime\QubusDateTimeImmutable;
 
+use function array_key_exists;
+use function is_array;
 use function is_int;
-use function is_string;
 use function preg_match;
-use function Qubus\Support\Helpers\is_false__;
-use function Qubus\Support\Helpers\is_null__;
 use function serialize;
+use function str_starts_with;
 use function time;
 use function unserialize;
 
@@ -40,41 +34,32 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
-     * @throws TypeException
-     * @throws FilesystemException
      */
     public function get(string $key): mixed
     {
-        // expired data should be deleted first.
-        if (! $this->has($key)) {
-            return null;
-        }
+        $cache = $this->readValidEntry($key);
 
-        try {
-            $cache = unserialize($this->operator->read($key));
-
-            return $cache['value'];
-        } catch (UnableToReadFile | FilesystemException $ex) {
-            return null;
-        }
+        return $cache['value'] ?? null;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function set(string $key, mixed $value, ?int $ttl): bool
+    public function set(string $key, mixed $value, ?int $ttl = null): bool
     {
-        $expire = $this->convertTtl($ttl);
+        if (null !== $ttl && $ttl <= 0) {
+            return $this->delete($key);
+        }
 
         $cache = [
             'key'   => $key,
-            'ttl'   => $expire,
+            'ttl'   => null === $ttl ? null : time() + $ttl,
             'value' => $value,
         ];
 
         try {
             $this->operator->write($key, serialize($cache));
-        } catch (UnableToWriteFile | FilesystemException $ex) {
+        } catch (FilesystemException) {
             return false;
         }
 
@@ -83,83 +68,124 @@ class FileSystemCacheAdapter extends Multiple implements CacheAdapter
 
     /**
      * {@inheritdoc}
-     * @throws FilesystemException
      */
     public function delete(string $key): bool
     {
-        // Leaving this here in case it is needed based on some unforseen circumstance.
-        /*if (! $this->has($key)) {
-            return true;
-        }*/
-
         try {
+            if (! $this->operator->fileExists($key)) {
+                return true;
+            }
+
             $this->operator->delete($key);
 
             return true;
-        } catch (UnableToDeleteFile $ex) {
+        } catch (FilesystemException) {
             return false;
         }
     }
 
     /**
      * {@inheritdoc}
-     * @throws FilesystemException
      */
-    public function purge(?string $pattern): void
+    public function purge(?string $pattern = null): void
     {
-        $files = $this->operator->listContents('.');
-        foreach ($files as $file) {
-            try {
+        try {
+            $files = $this->operator->listContents('.', true);
+            foreach ($files as $file) {
                 if ('dir' === $file['type']) {
-                    return;
-                } else {
-                    if (1 === preg_match("#{$pattern}#", $file['path'])) {
+                    continue;
+                }
+
+                if (null === $pattern || 1 === preg_match("#{$pattern}#", $file['path'])) {
+                    try {
                         $this->operator->delete($file['path']);
+                    } catch (FilesystemException) {
+                        // Continue purging other entries if one file cannot be removed.
                     }
                 }
-            } catch (UnableToDeleteFile $e) {
-                return;
             }
+        } catch (FilesystemException) {
+            return;
         }
     }
 
     /**
      * {@inheritdoc}
-     * @throws TypeException
-     * @throws FilesystemException
      */
     public function has(string $key): bool
     {
-        if (is_false__($this->operator->fileExists($key))) {
-            return false;
-        }
-
-        $data = unserialize($this->operator->read($key));
-
-        $expire = match (true) {
-            $data['ttl'] instanceof QubusDateTimeImmutable => $data['ttl']->getTimestamp(),
-            is_int($data['ttl']) => $data['ttl'],
-            is_null__($data['ttl']) => time() + 315360000 //ten years
-        };
-
-        if ($expire === 0 || $expire < time()) {
-            $this->operator->delete($key);
-            return false;
-        }
-
-        return true;
+        return null !== $this->readValidEntry($key);
     }
 
-    private function convertTtl(int|DateInterval|null $ttl): int|QubusDateTimeImmutable
+    /**
+     * Delete expired or malformed cache entries while preserving unrelated files.
+     */
+    public function prune(): bool
     {
-        if ($ttl instanceof DateInterval) {
-            $ttl = DateIntervalConverter::convert($ttl);
+        $success = true;
+
+        try {
+            foreach ($this->operator->listContents('.', true) as $file) {
+                if ('dir' === $file['type']) {
+                    continue;
+                }
+
+                $path = $file['path'];
+                if (! str_starts_with($path, '@psr6_') && ! str_starts_with($path, '@psr16_')) {
+                    continue;
+                }
+
+                if (null === $this->readValidEntry($path) && $this->operator->fileExists($path)) {
+                    $success = false;
+                }
+            }
+        } catch (FilesystemException) {
+            return false;
         }
 
-        return match (true) {
-            $ttl instanceof DateInterval => new QubusDateTimeImmutable()->add($ttl),
-            is_int($ttl) => new QubusDateTimeImmutable("now +$ttl seconds"),
-            is_null__($ttl) => time() + 315360000 //ten years
+        return $success;
+    }
+
+    /**
+     * Read an entry and remove it if it is expired or malformed.
+     *
+     * @return array{key: string, ttl: int|QubusDateTimeImmutable|null, value: mixed}|null
+     */
+    private function readValidEntry(string $key): ?array
+    {
+        try {
+            if (! $this->operator->fileExists($key)) {
+                return null;
+            }
+
+            $data = @unserialize($this->operator->read($key), ['allowed_classes' => true]);
+        } catch (FilesystemException) {
+            return null;
+        }
+
+        if (
+            ! is_array($data)
+            || ! array_key_exists('key', $data)
+            || ! array_key_exists('ttl', $data)
+            || ! array_key_exists('value', $data)
+            || $data['key'] !== $key
+        ) {
+            $this->delete($key);
+            return null;
+        }
+
+        $expiresAt = match (true) {
+            $data['ttl'] instanceof QubusDateTimeImmutable => $data['ttl']->getTimestamp(),
+            is_int($data['ttl']) => $data['ttl'],
+            null === $data['ttl'] => null,
+            default => 0,
         };
+
+        if (null !== $expiresAt && $expiresAt <= time()) {
+            $this->delete($key);
+            return null;
+        }
+
+        return $data;
     }
 }
